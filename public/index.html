@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Servicios</title>
+    <link rel="stylesheet" href="estilos.css">
+  </head>
+  <body>
+    <h1>Servicios</h1>
+    <form action="javascript:saludaHilo();">
+      <p><input type="text" id="nombre1" required placeholder="Nombre 1"></p>
+      <p><input type="text" id="nombre2" required placeholder="Nombre 2"></p>
+      <p>
+        <button type="submit">Saludar (Hilos)</button>
+        <button type="button" onclick="saludaHttp();">Saludar (Http)</button>
+      </p>
+      <footer>Copyright &copy; 2020 Ricardo Armando Machorro Reyes.</footer>
+    </form>
+    <script>
+      //@ts-check
+      /* Crea un worker que cuyo código fuente está en el archivo "wwSaludo.js" y
+       * se ejecuta en un hilo independiente. */
+      const hilo = new Worker("wwSaludo.js");
+
+      /* Muchos objetos de JavaScript reciben eventos, tales como un click, la
+       * presión de una tecla, el movimiento del ratón sobre ellos, la recepción
+       * de mensajes, etc. Los event listener son funciones que se invocan cuando
+       * alguno de ellos sucede.
+       * El método addEventListener de un element, asocia un evento, como
+       * "click" (hacer click en un element), "input" (presionar una tecla) o
+       * "message" (la recepción de un mensaje enviado por un hilo") con
+       * una función event listener. En este caso, se declara que al recibir un
+       * mensaje enviado por el "hilo", se muestren los datos que envía el hilo.
+       * El parámeto evt contiene la descripción del evento y "evt.data" son los
+       * datos que envía el hilo. */
+      hilo.addEventListener("message", evt => alert(evt.data));
+
+      /** Envía datos al hilo para que genere un saludo. */
+      function saludaHilo() {
+        /* Toma los datos capturados en la interfaz gráfica y arma un objeto
+         * con las property nombre1 y nombre2. */
+        const modelo = leeModelo();
+        // Envía los datos al hilo.
+        hilo.postMessage(modelo);
+      }
+
+      /** Toma los datos capturados en la interfaz gráfica y arma un objeto
+       * con las property nombre1 y nombre2.
+       * @returns {{nombre1:string, nombre2:string}} los datos capturados. */
+      function leeModelo() {
+        // Lo que está entre llaves es el objeto.
+        return {
+          /* nombre1: indica el nombre de la property
+           * nombre1.value.trim() toma la captura de id="nombre1" y le quita los
+           *        espacios y saltos de línea al inicio y al final. */
+          // @ts-ignore
+          nombre1: nombre1.value.trim(),
+          // @ts-ignore
+          nombre2: nombre2.value.trim()
+        };
+      }
+
+      /** Envía los datos a la función en Internet. */
+      function saludaHttp() {
+        const modelo = leeModelo();
+        /* La función fetch envía los datos al servidor. El texto que recibe como
+         * parámetro es la url que se invoca. El signo de interrogación "?"
+         * permite pasarle parámetros y encodeURIComponent formatea la
+         * información para que se puede colocar en la URL. El signo "&" separa
+         * los parámetros. En este caso se envían los parámetros "nombre1" y
+         * "nombre2", que llevan los datos del modelo.
+         * No se espera a que termine la comunicación y pasa a la siguiente
+         * instrucción, terminando la invocación de saludaHttp. Cuando la
+         * comunicación termina en un momento posterior, se invoca una de las
+         * funciones registradas con then y catch. */
+        fetch("saludo?nombre1=" + encodeURIComponent(modelo.nombre1)
+          + "&nombre2=" + encodeURIComponent(modelo.nombre2))
+          /* then recibe una función que se ejecuta cuando la comunicación con
+           * el servidor haya terminado exitosamente. */
+          .then(
+            /** Función que se ejecuta cuando la comunicación con el servidor
+             * termina exitosamente.
+             * @param {Response} respuestaHttp el resultado de la conexión */
+            respuestaHttp => {
+              /* La property ok de la respuesta vale true si la conexión terminó
+               * con éxito. */
+              if (respuestaHttp.ok) {
+                /* En esta parte del if, la conexión terminó con éxito. Hay que
+                 * mostrar el texto del servidor. respuestaHttp.text() devuelve
+                 * una promise con el texto recibido; dicha promise se devuelve
+                 * como resultado de esta función. */
+                return respuestaHttp.text();
+              } else {
+                /* En esta parte del if, la conexión termina con errores. Se
+                 * lanza una excepción que es atrapada por la función del
+                 * .catch en la línea 117. La expresión respuestaHttp.statusText
+                 * devuelve un texto describiendo el error, que normalmente está
+                 * en inglés. */
+                throw new Error(respuestaHttp.statusText)
+              }
+            })
+          /* La función del .then anterior, devuelve una promise; cuando esta
+           * termina de ejecutarse, el valor que devuelve se le pasa a la
+           * función de este then. */
+          .then(texto => alert(texto))
+          /* Cuando se genere una excepción en cualquier punto de la cadena
+           * de operaciones, se invoca la función que recibe catch. */
+          .catch(e => alert(e.message));
+      }
+    </script>
+  </body>
+</html>
